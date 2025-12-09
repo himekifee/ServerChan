@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Fabric Client (:fabric)",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/fabric/../run",
+      "console": "integratedTerminal",
+      "stopOnEntry": false,
+      "mainClass": "net.fabricmc.devlaunchinjector.Main",
+      "vmArgs": "-Dfabric.dli.config\u003d/home/grider/Projects/ServerChan/fabric/.gradle/loom-cache/launch.cfg -Dfabric.dli.env\u003dclient -Dfabric.dli.main\u003dnet.fabricmc.loader.impl.launch.knot.KnotClient",
+      "args": "",
+      "env": {},
+      "projectName": "fabric"
+    },
+    {
+      "type": "java",
+      "name": "Fabric Server (:fabric)",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/fabric/../run",
+      "console": "integratedTerminal",
+      "stopOnEntry": false,
+      "mainClass": "net.fabricmc.devlaunchinjector.Main",
+      "vmArgs": "-Dfabric.dli.config\u003d/home/grider/Projects/ServerChan/fabric/.gradle/loom-cache/launch.cfg -Dfabric.dli.env\u003dserver -Dfabric.dli.main\u003dnet.fabricmc.loader.impl.launch.knot.KnotServer",
+      "args": "nogui nogui",
+      "env": {},
+      "projectName": "fabric"
+    },
+    {
+      "type": "java",
+      "name": "Attach to ServerChan Docker",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "timeout": 30000
+    }
+  ]
+}

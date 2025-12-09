@@ -1,0 +1,681 @@
+plugins {
+    id "java"
+
+    // Plugin to put dependencies inside our final jar
+    id "com.github.johnrengelman.shadow" version '8.1.1' apply false
+
+    // Plugin to create merged jars
+    id "io.github.pacifistmc.forgix" version "2.0.0-SNAPSHOT.5.1"
+
+    // Manifold preprocessor
+    id "systems.manifold.manifold-gradle-plugin" version "0.0.2-alpha"
+
+    // Architectury is used here only as a replacement for forge's own loom
+    id "dev.architectury.loom" version "1.13-SNAPSHOT" apply false
+
+    // Modpublisher: publish to Github, Modrinth and Curseforge in one go
+    id "com.hypherionmc.modutils.modpublisher" version "2.1.4"
+}
+
+
+/**
+ * Creates the list of preprocessors to use.
+ *
+ * @param mcVers array of all MC versions
+ * @param mcIndex array index of the currently active MC version
+ */
+def writeBuildGradlePredefine(List<String> mcVers, int mcIndex)
+{
+    // Build the list of preprocessors to use
+    StringBuilder sb = new StringBuilder();
+
+    sb.append("# DON'T TOUCH THIS FILE, This is handled by the build script\n");
+
+    // Helper to convert version string to numeric (e.g., "1.19.4" -> 11904, "1.20" -> 12000)
+    def versionToNumeric = { String ver ->
+        def parts = ver.split("\\.")
+        int major = parts.length > 0 ? parts[0] as int : 0
+        int minor = parts.length > 1 ? parts[1] as int : 0
+        int patch = parts.length > 2 ? parts[2] as int : 0
+        return major * 10000 + minor * 100 + patch
+    }
+
+    // Define major version constants
+    for (int i = 0; i < mcVers.size(); i++)
+    {
+        String verStr = mcVers[i].replace(".", "_")
+        int numericVer = versionToNumeric(mcVers[i] + ".0") // e.g., "1.19" -> 11900
+        sb.append("MC_" + verStr + "=" + numericVer + "\n")
+    }
+
+    // Define commonly used minor version constants
+    def minorVersions = [
+        "1.12.2", "1.13.2", "1.14.4", "1.15.2",
+        "1.16.5", "1.17", "1.17.1", "1.18", "1.18.2",
+        "1.19.2", "1.19.3", "1.19.4",
+        "1.20.1", "1.20.2", "1.20.4", "1.20.6",
+        "1.21.1", "1.21.3", "1.21.4", "1.21.6"
+    ]
+    for (String minorVer : minorVersions) {
+        String verStr = minorVer.replace(".", "_")
+        int numericVer = versionToNumeric(minorVer)
+        sb.append("MC_" + verStr + "=" + numericVer + "\n")
+    }
+
+    // Set MC_VER based on the actual minecraft_version being built
+    String actualMcVersion = rootProject.minecraft_version
+    int currentNumericVer = versionToNumeric(actualMcVersion)
+    sb.append("MC_VER=" + currentNumericVer + "\n")
+
+    // Check if this is a development build
+    if (mod_version.toLowerCase().contains("dev"))
+    {
+        // WARNING: only use this for logging, we don't want to have confusion
+        // when a method doesn't work correctly in the release build.
+        sb.append("DEV_BUILD=\n");
+    }
+
+    def propsContent = sb.toString()
+
+    // Write to root project
+    new File(projectDir, "build.properties").text = propsContent
+
+    // Write to all subproject source directories for Manifold preprocessor
+    def subprojects = ["common", "fabric", "forge", "neoforge", "spigot"]
+    for (String subproject : subprojects) {
+        def subprojDir = new File(projectDir, subproject)
+        if (subprojDir.exists()) {
+            // Write to subproject root
+            new File(subprojDir, "build.properties").text = propsContent
+            // Write to source directory (where Manifold looks)
+            def srcDir = new File(subprojDir, "src/main/java")
+            if (srcDir.exists()) {
+                new File(srcDir, "build.properties").text = propsContent
+            }
+        }
+    }
+}
+
+
+// Transfers the values set in settings.gradle to the rest of the project
+project.gradle.ext.getProperties().each { prop ->
+    rootProject.ext.set(prop.key, prop.value)
+//    println "Added prop [key:" + prop.key + ", value:" + prop.value + "]"
+}
+// Sets up manifold stuff
+writeBuildGradlePredefine(rootProject.mcVers, rootProject.mcIndex)
+
+
+
+
+// Sets up the version string (the name we use for our jar)
+rootProject.versionStr = rootProject.mod_version + "-" + rootProject.file_name //+ rootProject.minecraft_version // + "-" + new Date().format("yyyy_MM_dd_HH_mm")
+
+// Keep every shaded Jackson artifact on the last Java 8 compatible release to avoid Java 22 bytecode in META-INF/versions
+ext.jacksonVersionLock = "2.15.4"
+
+// Forgix settings (used for merging jars)
+def mergeFabric = false
+def mergeQuilt = false
+def mergeForge = false
+def mergeNeoForge = false
+def mergeSpigot = false
+
+if (rootProject.hasProperty("forgix_merge")){
+    for (loader in ((String) rootProject.forgix_merge).split(",")) {
+        def loaderName = loader.trim() // Trim it in case a space is added before or after the comma
+        println "Adding loader " + loaderName + " to Forgix Merge"
+        switch (loaderName){
+            case "fabric":
+                mergeFabric = true
+                break
+            case "quilt":
+                mergeQuilt = true
+                break
+            case "forge":
+                mergeForge = true
+                break
+            case "neoforge":
+                mergeNeoForge = true
+                break
+            case "spigot":
+                mergeSpigot = true
+                break
+        }
+    }
+}
+else{
+    println "Adding all loaders to Forgix Merge because nothing was specified!"
+    mergeFabric = true
+    mergeQuilt = true
+    mergeForge = true
+    mergeNeoForge = true
+    mergeSpigot = true
+}
+
+// Count how many projects will be merged
+def mergeCount = 0
+if (findProject(":forge") && mergeForge) mergeCount++
+if (findProject(":neoforge") && mergeNeoForge) mergeCount++
+if (findProject(":fabric") && mergeFabric) mergeCount++
+if (findProject(":quilt") && mergeQuilt) mergeCount++
+if (findProject(":spigot") && mergeSpigot) mergeCount++
+
+forgix {
+    archiveVersion = "${rootProject.versionStr}"
+
+    if (findProject(":forge") && mergeForge) {
+        forge()
+    }
+    if (findProject(":neoforge") && mergeNeoForge) {
+        neoforge()
+    }
+    if (findProject(":fabric") && mergeFabric) {
+        fabric()
+    }
+    if (findProject(":quilt") && mergeQuilt) {
+        quilt()
+    }
+    if (findProject(":spigot") && mergeSpigot) {
+        spigot()
+    }
+}
+
+// Skip mergeJars if there's only one (or zero) projects to merge
+tasks.named('mergeJars') {
+    enabled = mergeCount >= 2
+    if (!enabled) {
+        println "Skipping mergeJars: only ${mergeCount} project(s) available (need at least 2)"
+    }
+}
+
+// Fix forgix merged jar to include META-INF/mods.toml for Forge compatibility
+// NeoForge provides both mods.toml and neoforge.mods.toml, but forgix only keeps neoforge.mods.toml
+// We copy neoforge.mods.toml as mods.toml since it's compatible with both loaders
+tasks.register('fixForgixMods') {
+    dependsOn 'mergeJars'
+    doLast {
+        def forgixDir = file('build/forgix')
+        if (!forgixDir.exists()) {
+            logger.info("No forgix directory found, skipping mods.toml fix")
+            return
+        }
+
+        def mergedJars = fileTree(forgixDir).matching {
+            include '**/*.jar'
+            exclude '**/*-sources.jar'
+        }
+
+        mergedJars.each { mergedJar ->
+            logger.lifecycle("Checking ${mergedJar.name} for mods.toml...")
+
+            // Check if neoforge.mods.toml exists in the jar
+            def hasNeoforgeModsToml = false
+            def hasModsToml = false
+
+            ant.unzip(src: mergedJar, dest: "$buildDir/tmp-forgix-check") {
+                patternset {
+                    include(name: 'META-INF/neoforge.mods.toml')
+                    include(name: 'META-INF/mods.toml')
+                }
+            }
+
+            def neoforgeModsToml = file("$buildDir/tmp-forgix-check/META-INF/neoforge.mods.toml")
+            def modsToml = file("$buildDir/tmp-forgix-check/META-INF/mods.toml")
+
+            hasNeoforgeModsToml = neoforgeModsToml.exists()
+            hasModsToml = modsToml.exists()
+
+            if (hasNeoforgeModsToml && !hasModsToml) {
+                logger.lifecycle("Adding META-INF/mods.toml from neoforge.mods.toml to ${mergedJar.name}")
+
+                // Add neoforge.mods.toml as mods.toml
+                ant.zip(destfile: mergedJar, update: true) {
+                    zipfileset(file: neoforgeModsToml, fullpath: 'META-INF/mods.toml')
+                }
+
+                logger.lifecycle("Successfully added META-INF/mods.toml to ${mergedJar.name}")
+            } else if (hasModsToml) {
+                logger.lifecycle("${mergedJar.name} already has META-INF/mods.toml, skipping")
+            } else if (!hasNeoforgeModsToml) {
+                logger.warn("${mergedJar.name} has neither neoforge.mods.toml nor mods.toml")
+            }
+
+            delete "$buildDir/tmp-forgix-check"
+        }
+    }
+}
+
+// Automatically fix mods.toml after merging
+mergeJars.finalizedBy(fixForgixMods)
+
+subprojects { p ->
+    ext.kotlinRuntimeVersion = "1.9.20"
+    // Does the same as "p == project(":common") || p == project(":fabric") || p == project(":quilt")  || p == project(":forge") || p == project("WhateverWeAddLaterOn")"
+    // Useful later on so we dont have duplicated code
+    def isMinecraftSubProject = true//p != project(":core") && p != project(":api")
+
+
+    // Apply plugins
+    apply plugin: "java"
+    apply plugin: "com.github.johnrengelman.shadow"
+    if (isMinecraftSubProject){
+        apply plugin: "systems.manifold.manifold-gradle-plugin"
+        apply plugin: "com.hypherionmc.modutils.modpublisher"
+    }
+    
+    // Apply forge's loom
+    if (
+            (findProject(":forge") && p == project(":forge")) ||
+                    (findProject(":neoforge") && p == project(":neoforge"))
+    )
+    apply plugin: "dev.architectury.loom"
+
+
+    // Set the manifold version (may not be required tough)
+    manifold {
+        manifoldVersion = rootProject.manifold_version
+    }
+    
+
+    // set up custom configurations (configurations are a way to handle dependencies)
+    configurations {
+        // extends the shadowJar configuration
+
+        // have implemented dependencies automatically embedded in the final jar
+        implementation.extendsFrom(shadowMe)
+
+        // Configuration fpr core & api
+        coreProjects
+        shadowMe.extendsFrom(coreProjects)
+
+
+        // This additional configuration is necessary because forge
+        //  needs forgeRuntimeLibrary, although adding it to shadowMe
+        //  causes runtime issues where the libraries aren't properly added
+        forgeShadowMe
+        // this should match shadowMe pretty closely
+        implementation.extendsFrom(forgeShadowMe)
+        shadowMe.extendsFrom(forgeShadowMe)
+        forgeRuntimeLibrary.extendsFrom(forgeShadowMe)
+
+
+        if (isMinecraftSubProject && p != project(":common")) {
+            // Shadow common
+            common
+            shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
+            compileClasspath.extendsFrom common
+            runtimeClasspath.extendsFrom common
+            if (findProject(":forge"))
+                developmentForge.extendsFrom common
+            if (findProject(":neoforge"))
+                developmentNeoForge.extendsFrom common
+            compileClasspath.extendsFrom coreProjects
+            runtimeClasspath.extendsFrom coreProjects
+            if (findProject(":forge"))
+                developmentForge.extendsFrom coreProjects
+            if (findProject(":neoforge"))
+                developmentNeoForge.extendsFrom coreProjects
+
+            if (findProject(":fabricLike") && p != project(":fabricLike")) {
+                // Shadow fabricLike
+                fabricLike
+                shadowFabricLike
+                compileClasspath.extendsFrom fabricLike
+                runtimeClasspath.extendsFrom fabricLike
+            }
+        }
+    }
+
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "org.jetbrains.kotlin") {
+                details.useVersion(kotlinRuntimeVersion)
+            }
+
+            if (details.requested.group in [
+                    "com.fasterxml.jackson.core",
+                    "com.fasterxml.jackson.datatype",
+                    "com.fasterxml.jackson.module"
+            ]) {
+                def artifact = details.requested.name
+                if (artifact in [
+                        "jackson-core",
+                        "jackson-databind",
+                        "jackson-annotations",
+                        "jackson-datatype-jdk8",
+                        "jackson-datatype-jsr310",
+                        "jackson-module-kotlin"
+                ]) {
+                    details.useVersion(rootProject.jacksonVersionLock)
+                }
+            }
+        }
+    }
+
+    dependencies {
+        // Manifold
+        if (isMinecraftSubProject) {
+            annotationProcessor("systems.manifold:manifold-preprocessor:${rootProject.manifold_version}")
+        }
+
+        /////// ...left here as examples
+
+        // Log4j
+        //implementation("org.apache.logging.log4j:log4j-api:${rootProject.log4j_version}")
+        //implementation("org.apache.logging.log4j:log4j-core:${rootProject.log4j_version}")
+
+        // Remember, for lwjgl dependencies that arent included in Minecraft, you need to also need to add it to the ShadowJar thing
+        //forgeShadowMe("org.lwjgl:lwjgl-jawt:${rootProject.lwjgl_version}") {
+        //    exclude group: "org.lwjgl", module: "lwjgl" // This module is imported by Minecraft so exclude it
+        //}     // this is relocated down below...
+
+        ///////
+
+        // Shadowed dependencies (applied to all Minecraft subprojects)
+        if (isMinecraftSubProject) {
+            // OpenAI stack (version locked to avoid multiple Kotlin runtimes)
+            shadowMe("com.openai:openai-java:4.8.0") {
+                exclude group: "com.google.errorprone"
+                exclude group: "org.jetbrains.kotlin"
+            }
+            shadowMe("com.openai:openai-java-core:4.8.0") {
+                exclude group: "com.google.errorprone"
+                exclude group: "org.jetbrains.kotlin"
+            }
+            shadowMe("com.squareup.okhttp3:okhttp:4.12.0") {
+                exclude group: "com.google.errorprone"
+            }
+            shadowMe("com.squareup.okio:okio:3.6.0")
+            shadowMe("com.squareup.okio:okio-jvm:3.6.0")
+            shadowMe("org.jetbrains.kotlin:kotlin-stdlib:${kotlinRuntimeVersion}")
+            shadowMe("org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlinRuntimeVersion}")
+            shadowMe("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinRuntimeVersion}")
+            shadowMe("org.jetbrains.kotlin:kotlin-reflect:${kotlinRuntimeVersion}")
+
+            // Jackson for JSON processing (2.15.x is the last version with Java 8 support)
+            shadowMe("com.fasterxml.jackson.core:jackson-databind:${rootProject.jacksonVersionLock}")
+            shadowMe("com.fasterxml.jackson.core:jackson-core:${rootProject.jacksonVersionLock}")
+            shadowMe("com.fasterxml.jackson.core:jackson-annotations:${rootProject.jacksonVersionLock}")
+            shadowMe("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${rootProject.jacksonVersionLock}")
+            shadowMe("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${rootProject.jacksonVersionLock}")
+            shadowMe("com.fasterxml.jackson.module:jackson-module-kotlin:${rootProject.jacksonVersionLock}")
+
+            // Lalein i18n library (core + json extension)
+            shadowMe("com.panayotis.lalein:core:1.1.0")
+            shadowMe("com.panayotis.lalein:json:1.1.0")
+
+            // ConfigLib for YAML configuration (platform-independent)
+            shadowMe("dev.tomwmth.configlib:configlib-yaml:4.6.0")
+
+            // SLF4J API required by schema generator used for structured outputs
+            shadowMe("org.slf4j:slf4j-api:1.7.36")
+        }
+
+        // Add common
+        if (isMinecraftSubProject && p != project(":common")) {
+            // Common
+            common(project(":common")) { transitive false }
+            shadowCommon(project(":common")) { transitive false }
+
+            // FabricLike
+            if (findProject(":fabricLike") && p != project(":fabricLike")) {
+                fabricLike(project(path: ":fabricLike")) { transitive false }
+                shadowFabricLike(project(path: ":fabricLike")) { transitive false }
+            }
+        }
+    }
+
+
+    shadowJar {
+        configurations = [project.configurations.shadowMe]
+        if (isMinecraftSubProject && p != project(":common")) {
+            configurations.push(project.configurations.shadowCommon) // Shadow the common subproject
+        
+            if (findProject(":fabricLike") && p != project(":fabricLike")) {
+                configurations.push(project.configurations.shadowFabricLike) // Shadow the fabricLike subproject
+            }
+        }
+        def librariesLocation = rootProject.mod_id + ".libraries"
+
+        relocate "okhttp3", "${librariesLocation}.okhttp3"
+        relocate "okio", "${librariesLocation}.okio"
+        relocate "com.panayotis", "${librariesLocation}.lalein"
+        relocate "org.jetbrains.annotations", "${librariesLocation}.jetbrains.annotations"
+        relocate "org.intellij.lang.annotations", "${librariesLocation}.intellij.lang.annotations"
+        relocate "com.moandjiezana.toml", "${librariesLocation}.toml"
+        relocate "de.exlll.configlib", "${librariesLocation}.configlib"
+        relocate "org.snakeyaml.engine", "${librariesLocation}.snakeyaml"
+        relocate "com.fasterxml.jackson", "${librariesLocation}.jackson"
+        relocate "org.slf4j", "${librariesLocation}.slf4j"
+        // relocate "kotlin", "${librariesLocation}.kotlin"
+        // relocate "kotlinx", "${librariesLocation}.kotlinx"
+
+        // Exclude Google Error Prone annotations - compile-time only, conflicts with NeoForge's module system
+        exclude "com/google/errorprone/**"
+        exclude "**/com/google/errorprone/**"
+
+        // Exclude other Google compile-time annotations that may conflict
+        exclude "com/google/j2objc/**"
+        exclude "javax/annotation/**"
+
+        // Exclude module-info files that can cause Java module system conflicts
+        exclude "module-info.class"
+        exclude "**/module-info.class"
+
+        mergeServiceFiles()
+    }
+    // Using jar.finalizedBy(shadowJar) causes issues so we do this scuffed bypass
+    jar.dependsOn(shadowJar)
+
+
+    // Put stuff from gradle.properties into the mod info
+    processResources {
+        def resourceTargets = [ // Location of where to inject the properties
+
+                                // Properties for each of the loaders
+                                "fabric.mod.json",
+                                "quilt.mod.json",
+                                "META-INF/mods.toml",
+                                "META-INF/neoforge.mods.toml",//for MC >= 1.20.5
+                                "plugin.yml",
+                                "pack.mcmeta"
+        ]
+        def intoTargets = ["$buildDir/resources/main/"] // Location of the built resources folder
+
+        // Fix forge version numbering system as it is weird
+        // For whatever reason forge uses [1.18, 1.18.1, 1.18.2) instead of the standard ["1.18", "1.18.1", "1.18.2"]
+        def compatible_forgemc_versions = "${compatible_minecraft_versions}".replaceAll("\"", "").replaceAll("]", ",)")
+//        println compatible_forgemc_versions
+
+        // Quilt's custom contributors system
+        // This has to be like
+        // "Person": "Developer", "Another person": "Developer"
+        def quilt_contributors = []
+        def mod_author_list = mod_authors.replaceAll("\"", "").replace("[", "").replace("]", "").split(",")
+        for (dev in mod_author_list) {
+            quilt_contributors.push("\"${dev.trim()}\": \"Developer\"")
+        }
+        quilt_contributors.reverse()
+        //println quilt_contributors.join(", ")
+
+//        println p.tasks.findByName('shadowJar')
+
+
+        // The left side is what gets replaced in the mod info and the right side is where to get it from in the gradle.properties
+        def replaceProperties = [
+                mod_id                       : mod_id,
+                version                      : mod_version,
+                mod_name                     : mod_name,
+                group                        : maven_group,
+                authors                      : mod_authors,
+                description                  : mod_description,
+                homepage                     : mod_homepage,
+                source                       : mod_source,
+                issues                       : mod_issues,
+                discord                      : mod_discord,
+                mod_license                  : mod_license,
+                neoforgeUpdateJSONURL        : neoforgeUpdateJSONURL,
+                forgeUpdateJSONURL           : forgeUpdateJSONURL,
+
+                minecraft_version            : minecraft_version,
+                compatible_minecraft_versions: compatible_minecraft_versions,
+                compatible_forgemc_versions  : compatible_forgemc_versions,
+                java_version                 : java_version,
+                quilt_contributors           : "{"+quilt_contributors.join(", ")+"}",
+
+                fabric_incompatibility_list  : fabric_incompatibility_list,
+                fabric_recommend_list        : fabric_recommend_list,
+
+                spigot_api_compatibility     : spigot_api_compatibility,
+        ]
+        
+        // replace any properties in the sub-projects with the values defined here
+        inputs.properties replaceProperties
+        replaceProperties.put "project", project
+        filesMatching(resourceTargets) {
+            expand replaceProperties
+        }
+        
+        intoTargets.each { target ->
+            if (file(target).exists()) {
+                copy {
+                    from(sourceSets.main.resources) {
+                        include resourceTargets
+                        expand replaceProperties
+                    }
+                    into target
+                }
+            }
+        }
+
+
+    }
+}
+
+allprojects { p ->
+    // Does the same as "p == project(":common") || p == project(":fabric") || p == project(":quilt")  || p == project(":forge") || p == project("WhateverWeAddLaterOn")"
+    // Useful later on so we dont have duplicated code
+    def isMinecraftSubProject = true//p != project(":core") && p != project(":api")
+
+
+    apply plugin: "java"
+    apply plugin: "maven-publish"
+    
+    archivesBaseName = rootProject.mod_id
+    version = project.name + "-" + rootProject.versionStr
+    group = rootProject.maven_group
+    
+    // this is the text that appears at the top of the overview (home) page
+    // and is used when bookmarking a page
+    javadoc.title = rootProject.mod_id + "-" + project.name
+
+    // Some annotations arent "technically" part of the official java standard,
+    //  so we define it ourself here
+    javadoc {
+        configure( options ) {
+            tags(
+                    'apiNote:a:API Note:',
+                    'implSpec:a:Implementation Requirements:',
+                    'implNote:a:Implementation Note:'
+            )
+        }
+    }
+
+
+    repositories {
+        // The central repo
+        mavenCentral()
+
+        // Minecraft libraries (for old dependencies like oshi-core used in MC 1.16)
+        maven { url "https://libraries.minecraft.net/" }
+
+        // Used for Google's Collect library
+        maven { url "https://repo.enonic.com/public/" }
+
+        // For Architectury API
+        maven { url "https://maven.architectury.dev" }
+
+        // For Git repositories
+        maven { url "https://jitpack.io" }
+
+        // For Manifold Preprocessor
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+
+        // For ConfigLib
+        maven { url 'https://lib.alpn.cloud/alpine-public/' }
+
+        // Required for importing Modrinth mods
+        maven {
+            name = "Modrinth"
+            url = "https://api.modrinth.com/maven"
+            content {
+                includeGroup "maven.modrinth"
+            }
+        }
+
+        // Required for importing CursedForge mods
+        maven {
+            url "https://www.cursemaven.com"
+            content {
+                includeGroup "curse.maven"
+            }
+        }
+
+        // These 4 are for importing mods that arnt on CursedForge, Modrinth, GitHub, GitLab or anywhere opensource
+        flatDir {
+            dirs "${rootDir}/mods/fabric"
+            content {
+                includeGroup "fabric-mod"
+            }
+        }
+        flatDir {
+            dirs "${rootDir}/mods/quilt"
+            content {
+                includeGroup "quilt-mod"
+            }
+        }
+        flatDir {
+            dirs "${rootDir}/mods/forge"
+            content {
+                includeGroup "forge-mod"
+            }
+        }
+        flatDir {
+            dirs "${rootDir}/mods/neoforge"
+            content {
+                includeGroup "neoforge-mod"
+            }
+        }
+    }
+
+    task copyCommonLoaderResources(type: Copy) {
+        into(file(p.file("build/resources/main")))
+    }
+
+    task copyCoreResources(type: Copy) {
+        from fileTree(project(":common").file("src/main/resources/assets"))
+        into p.file("build/resources/main/assets")
+    }
+
+    tasks.withType(JavaCompile) {
+        options.release = rootProject.java_version as Integer
+        options.compilerArgs += ["-Xplugin:Manifold"]
+        options.encoding = "UTF-8"
+    }
+
+    java {
+        withSourcesJar()
+    }
+}
+
+// Delete the merged folder when running clean
+task cleanMergedJars() {
+    def mergedFolder = file("Merged")
+    if (mergedFolder.exists()) {
+        delete(mergedFolder)
+    }
+}
+// add cleanMergedJars to the end of the "clean" task
+tasks["clean"].finalizedBy(cleanMergedJars)
