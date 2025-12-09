@@ -1,0 +1,23 @@
+dependencies {
+    // ConfigLib for YAML configuration (platform-independent)
+    compileOnly("dev.tomwmth.configlib:configlib-yaml:4.6.0")
+
+    // Dependencies provided by Minecraft at runtime (compileOnly since they're bundled)
+    compileOnly("com.google.code.gson:gson:2.10.1")
+    compileOnly("org.apache.logging.log4j:log4j-api:2.20.0")
+}
+
+
+publishing {
+    publications {
+        mavenCommon(MavenPublication) {
+            artifactId = rootProject.mod_id
+            from components.java
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+    }
+}

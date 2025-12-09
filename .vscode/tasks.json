@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-fabric-1.14",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                ":fabric:classes",
+                "-PmcVer=1.14"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,694 @@
+name: Server Compatibility Test
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mc_version:
+        description: "Specific MC version to test"
+        required: false
+        default: ""
+
+env:
+  MCUTILS_API: https://mcutils.com/api/server-jars
+  MODRINTH_API: https://api.modrinth.com/v2
+  PUBLISH_CURSEFORGE: "false"
+
+jobs:
+  build:
+    name: Build Mod
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_version:
+          [
+            "1.12",
+            "1.13",
+            "1.14",
+            "1.15",
+            "1.16",
+            "1.17",
+            "1.18",
+            "1.19",
+            "1.20",
+            "1.21",
+            "1.21.6",
+          ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build for MC ${{ matrix.mc_version }}
+        run: ./gradlew -PmcVer="${{ matrix.mc_version }}" build mergeJars --no-daemon
+
+      - name: Find Built Artifact
+        id: find-artifact
+        run: |
+          JAR_FILE=$(ls build/forgix/serverchan-*.jar 2>/dev/null | head -1 || true)
+          if [ -z "$JAR_FILE" ]; then
+             # Fallback logic from original script
+             LOADERS=$(grep "^builds_for=" "versionProperties/${{ matrix.mc_version }}.properties" | cut -d'=' -f2)
+             for loader in ${LOADERS//,/ }; do
+               JAR_FILE=$(ls "${loader}/build/libs"/serverchan-*-${{ matrix.mc_version }}*.jar 2>/dev/null | grep -v sources | grep -v javadoc | head -1 || true)
+               [ -n "$JAR_FILE" ] && break
+             done
+          fi
+
+          if [ -z "$JAR_FILE" ]; then echo "ERROR: No jar found"; exit 1; fi
+          echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: serverchan-${{ matrix.mc_version }}
+          path: ${{ steps.find-artifact.outputs.jar_path }}
+          retention-days: 1
+
+  test:
+    name: ${{ matrix.loader }} ${{ matrix.mc_full }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          # Fabric
+          - loader: fabric
+            mc_version: "1.14"
+            mc_full: "1.14.4"
+            java: "8"
+          - loader: fabric
+            mc_version: "1.15"
+            mc_full: "1.15.2"
+            java: "8"
+          - loader: fabric
+            mc_version: "1.16"
+            mc_full: "1.16.1"
+            java: "8"
+          - loader: fabric
+            mc_version: "1.16"
+            mc_full: "1.16.5"
+            java: "8"
+          - loader: fabric
+            mc_version: "1.17"
+            mc_full: "1.17"
+            java: "16"
+          - loader: fabric
+            mc_version: "1.17"
+            mc_full: "1.17.1"
+            java: "16"
+          - loader: fabric
+            mc_version: "1.18"
+            mc_full: "1.18"
+            java: "17"
+          - loader: fabric
+            mc_version: "1.18"
+            mc_full: "1.18.2"
+            java: "17"
+          - loader: fabric
+            mc_version: "1.19"
+            mc_full: "1.19"
+            java: "17"
+          - loader: fabric
+            mc_version: "1.19"
+            mc_full: "1.19.4"
+            java: "17"
+          - loader: fabric
+            mc_version: "1.20"
+            mc_full: "1.20"
+            java: "21"
+          - loader: fabric
+            mc_version: "1.20"
+            mc_full: "1.20.6"
+            java: "21"
+          - loader: fabric
+            mc_version: "1.21"
+            mc_full: "1.21"
+            java: "21"
+          - loader: fabric
+            mc_version: "1.21.6"
+            mc_full: "1.21.10"
+            java: "21"
+          # Forge
+          - loader: forge
+            mc_version: "1.16"
+            mc_full: "1.16.1"
+            java: "8"
+          - loader: forge
+            mc_version: "1.16"
+            mc_full: "1.16.5"
+            java: "8"
+          - loader: forge
+            mc_version: "1.17"
+            mc_full: "1.17.1"
+            java: "16"
+          - loader: forge
+            mc_version: "1.18"
+            mc_full: "1.18"
+            java: "17"
+          - loader: forge
+            mc_version: "1.18"
+            mc_full: "1.18.2"
+            java: "17"
+          - loader: forge
+            mc_version: "1.19"
+            mc_full: "1.19"
+            java: "17"
+          - loader: forge
+            mc_version: "1.19"
+            mc_full: "1.19.4"
+            java: "17"
+          - loader: forge
+            mc_version: "1.20"
+            mc_full: "1.20.6"
+            java: "21"
+          - loader: forge
+            mc_version: "1.21"
+            mc_full: "1.21"
+            java: "21"
+          - loader: forge
+            mc_version: "1.21.6"
+            mc_full: "1.21.10"
+            java: "21"
+          # NeoForge
+          - loader: neoforge
+            mc_version: "1.20"
+            mc_full: "1.20.2"
+            java: "21"
+            neoforge_prefix: "20.2"
+          - loader: neoforge
+            mc_version: "1.20"
+            mc_full: "1.20.6"
+            java: "21"
+            neoforge_prefix: "20.6"
+          - loader: neoforge
+            mc_version: "1.21"
+            mc_full: "1.21"
+            java: "21"
+            neoforge_prefix: "21.0"
+          - loader: neoforge
+            mc_version: "1.21.6"
+            mc_full: "1.21.10"
+            java: "21"
+            neoforge_prefix: "21.10"
+          # Paper/Spigot
+          - loader: paper
+            mc_version: "1.12"
+            mc_full: "1.12.2"
+            java: "8"
+          - loader: paper
+            mc_version: "1.13"
+            mc_full: "1.13.2"
+            java: "8"
+          - loader: paper
+            mc_version: "1.14"
+            mc_full: "1.14.4"
+            java: "8"
+          - loader: paper
+            mc_version: "1.15"
+            mc_full: "1.15.2"
+            java: "8"
+          - loader: paper
+            mc_version: "1.16"
+            mc_full: "1.16.5"
+            java: "8"
+          - loader: paper
+            mc_version: "1.17"
+            mc_full: "1.17.1"
+            java: "16"
+          - loader: paper
+            mc_version: "1.18"
+            mc_full: "1.18.2"
+            java: "17"
+          - loader: paper
+            mc_version: "1.19"
+            mc_full: "1.19.4"
+            java: "17"
+          - loader: paper
+            mc_version: "1.20"
+            mc_full: "1.20.6"
+            java: "21"
+          - loader: paper
+            mc_version: "1.21"
+            mc_full: "1.21"
+            java: "21"
+    steps:
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ matrix.java }}
+
+      - name: Cache Libraries
+        if: matrix.loader == 'forge' || matrix.loader == 'neoforge'
+        uses: actions/cache@v4
+        with:
+          path: server/libraries
+          key: ${{ matrix.loader }}-libs-${{ matrix.mc_full }}
+
+      - name: Create Directories
+        run: |
+          if [ "${{ matrix.loader }}" == "paper" ]; then
+            mkdir -p server/plugins
+          else
+            mkdir -p server/mods
+          fi
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: serverchan-${{ matrix.mc_version }}
+          path: server/${{ matrix.loader == 'paper' && 'plugins' || 'mods' }}
+
+      - name: Download & Setup Server
+        run: |
+          cd server
+
+          case "${{ matrix.loader }}" in
+            fabric)
+              curl -L -o server.jar "${{ env.MCUTILS_API }}/fabric/${{ matrix.mc_full }}/download"
+              # Fabric API
+              FABRIC_API_DATA=$(curl -s "${{ env.MODRINTH_API }}/project/fabric-api/version?game_versions=%5B%22${{ matrix.mc_full }}%22%5D&loaders=%5B%22fabric%22%5D" | head -c 100000)
+              FABRIC_API_URL=$(echo "$FABRIC_API_DATA" | jq -r '(.[0].files[] | select(.primary == true) | .url) // .[0].files[0].url' 2>/dev/null)
+              [ -n "$FABRIC_API_URL" ] && [ "$FABRIC_API_URL" != "null" ] && curl -L -o mods/fabric-api.jar "$FABRIC_API_URL" || echo "No Fabric API found"
+              ;;
+            forge)
+              curl -L -o forge-installer.jar "${{ env.MCUTILS_API }}/forge/${{ matrix.mc_full }}/download"
+              java -jar forge-installer.jar --installServer
+              [ -f "run.sh" ] && chmod +x run.sh || true
+              ;;
+            neoforge)
+              ALL_VERSIONS=$(curl -s "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge")
+              VER=$(echo "$ALL_VERSIONS" | jq -r '.versions[]' | grep "^${{ matrix.neoforge_prefix }}\." | grep -v beta | tail -1)
+              curl -L -o installer.jar "https://maven.neoforged.net/releases/net/neoforged/neoforge/${VER}/neoforge-${VER}-installer.jar"
+              java -jar installer.jar --installServer
+              [ -f "run.sh" ] && chmod +x run.sh
+              ;;
+            paper)
+              curl -L -o server.jar "${{ env.MCUTILS_API }}/paper/${{ matrix.mc_full }}/download"
+              ;;
+          esac
+
+      - name: Configure Server
+        run: |
+          echo "eula=true" > server/eula.txt
+          echo -e "server-port=25565\nonline-mode=false\nmax-players=1\nlevel-type=flat\ngenerate-structures=false\nspawn-monsters=false" > server/server.properties
+
+      - name: Run Test
+        env:
+          SERVERCHAN_CI_API_KEY: ${{ secrets.SERVERCHAN_CI_API_KEY }}
+        run: |
+          cd server
+
+          # Start server based on loader
+          case "${{ matrix.loader }}" in
+            fabric|paper)
+              java -Xmx2G -Xms1G -jar server.jar nogui &
+              ;;
+            forge)
+              if [ -f "run.sh" ]; then
+                ./run.sh &
+              elif ls forge-*.jar 1>/dev/null 2>&1; then
+                JAR=$(ls forge-*.jar | grep -v installer | head -1)
+                java -Xmx2G -Xms1G -jar "$JAR" nogui &
+              else
+                ARGS=$(find libraries -name "unix_args.txt" | head -1)
+                java -Xmx2G -Xms1G @"$ARGS" nogui &
+              fi
+              ;;
+            neoforge)
+              if [ -f "run.sh" ]; then
+                ./run.sh &
+              else
+                ARGS=$(find libraries -name "unix_args.txt" | head -1)
+                java -Xmx2G -Xms1G @"$ARGS" nogui &
+              fi
+              ;;
+          esac
+          SERVER_PID=$!
+
+          # Determine success criteria
+          if [ -n "$SERVERCHAN_CI_API_KEY" ]; then
+            TARGET_MSG="ci pass"
+            echo "Mode: AI Integration Test"
+          else
+            TARGET_MSG="ServerChan is online"
+            echo "Mode: Load Test"
+          fi
+
+          TIMEOUT=400
+          ELAPSED=0
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            if grep -q "$TARGET_MSG" logs/latest.log 2>/dev/null; then
+              echo "SUCCESS: Found '$TARGET_MSG'"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 0
+            fi
+            if grep -q "CI Test FAILED" logs/latest.log 2>/dev/null; then
+              echo "FAILURE: CI Test Failed"
+              cat logs/latest.log
+              exit 1
+            fi
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "Server died."
+              if grep -q "$TARGET_MSG" logs/latest.log 2>/dev/null; then
+                echo "SUCCESS: Found '$TARGET_MSG' after shutdown"
+                exit 0
+              fi
+              if grep -q "CI Test FAILED" logs/latest.log 2>/dev/null; then
+                echo "FAILURE: CI Test Failed"
+                cat logs/latest.log
+                exit 1
+              fi
+              cat logs/latest.log 2>/dev/null || true
+              exit 1
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+
+          echo "Timeout reached."
+          cat logs/latest.log 2>/dev/null || true
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+
+  summary:
+    name: Test Summary
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Results
+        run: |
+          echo "## Server Compatibility Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            exit 1
+          fi
+
+  publish-modrinth:
+    name: Publish to Modrinth (${{ matrix.mc_version }})
+    needs:
+      - build
+      - test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_version:
+          [
+            "1.12",
+            "1.13",
+            "1.14",
+            "1.15",
+            "1.16",
+            "1.17",
+            "1.18",
+            "1.19",
+            "1.20",
+            "1.21",
+            "1.21.6",
+          ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Version Properties
+        id: props
+        run: |
+          props_file="versionProperties/${{ matrix.mc_version }}.properties"
+          builds_for=$(grep '^builds_for=' "$props_file" | cut -d'=' -f2)
+          compatible_versions=$(grep '^compatible_minecraft_versions=' "$props_file" | cut -d'=' -f2)
+          file_name=$(grep '^file_name=' "$props_file" | cut -d'=' -f2)
+          mod_version=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+
+          IFS=',' read -ra loader_arr <<< "$builds_for"
+          loaders_json="["
+          sep=""
+          for l in "${loader_arr[@]}"; do
+            ltrim="${l//[[:space:]]/}"
+            loaders_json="${loaders_json}${sep}\"${ltrim}\""
+            sep=","
+          done
+          loaders_json="${loaders_json}]"
+
+          # Modrinth accepts a JSON array of version strings or wildcards like 1.21.x
+          case "${{ matrix.mc_version }}" in
+            1.21)
+              games_json='["1.21","1.21.1","1.21.2","1.21.3","1.21.4","1.21.5"]'
+              ;;
+            1.21.6)
+              games_json='["1.21.6","1.21.7","1.21.8","1.21.9","1.21.10"]'
+              ;;
+            *)
+              # For other versions, treat the property as a single entry unless it is comma-separated
+              IFS=',' read -ra game_arr <<< "$compatible_versions"
+              if [ "${#game_arr[@]}" -eq 1 ]; then
+                gtrim="${compatible_versions//[[:space:]]/}"
+                games_json="[\"${gtrim}\"]"
+              else
+                games_json="["
+                sep=""
+                for g in "${game_arr[@]}"; do
+                  gtrim="${g//[[:space:]]/}"
+                  games_json="${games_json}${sep}\"${gtrim}\""
+                  sep=","
+                done
+                games_json="${games_json}]"
+              fi
+              ;;
+          esac
+
+          echo "loaders=${loaders_json}" >> "$GITHUB_OUTPUT"
+          echo "game_versions=${games_json}" >> "$GITHUB_OUTPUT"
+          echo "version_name=${mod_version}-${file_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: serverchan-${{ matrix.mc_version }}
+          path: artifacts
+
+      - name: Locate Built Jar
+        id: jar
+        run: |
+          JAR=$(find artifacts -name "*.jar" | head -1)
+          if [ -z "$JAR" ]; then
+            echo "No jar found in artifacts"
+            exit 1
+          fi
+          echo "file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Compute Version from Tag
+        id: versioning
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          tag="${tag#v}"
+          echo "tag_version=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Modrinth
+        uses: cloudnode-pro/modrinth-publish@v2
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project: frZpQL6O
+          name: ServerChan ${{ steps.props.outputs.version_name }} (MC ${{ matrix.mc_version }})
+          version: ${{ steps.props.outputs.version_name }}
+          changelog: Release ${{ steps.versioning.outputs.tag_version }} for MC ${{ matrix.mc_version }}
+          loaders: ${{ steps.props.outputs.loaders }}
+          game-versions: ${{ steps.props.outputs.game_versions }}
+          files: ${{ steps.jar.outputs.file }}
+
+  publish-curseforge:
+    name: Publish to CurseForge (${{ matrix.mc_version }})
+    needs:
+      - build
+      - test
+    # Disabled for now; set to "true" to re-enable alongside the tag check.
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && false }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_version:
+          [
+            "1.12",
+            "1.13",
+            "1.14",
+            "1.15",
+            "1.16",
+            "1.17",
+            "1.18",
+            "1.19",
+            "1.20",
+            "1.21",
+            "1.21.6",
+          ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Version Properties
+        id: props
+        run: |
+          props_file="versionProperties/${{ matrix.mc_version }}.properties"
+          builds_for=$(grep '^builds_for=' "$props_file" | cut -d'=' -f2)
+          game_versions=$(grep '^compatible_minecraft_versions=' "$props_file" | cut -d'=' -f2)
+          file_name=$(grep '^file_name=' "$props_file" | cut -d'=' -f2)
+          mc_version=$(grep '^minecraft_version=' "$props_file" | cut -d'=' -f2)
+          java_version=$(grep '^java_version=' "$props_file" | cut -d'=' -f2)
+          mod_version=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+          curseforge_id=$(grep '^curseforge_id=' gradle.properties | cut -d'=' -f2)
+          release_type=$(grep '^release_type=' gradle.properties | cut -d'=' -f2)
+
+          IFS=',' read -ra loader_arr <<< "$builds_for"
+          loader_names=()
+          for l in "${loader_arr[@]}"; do
+            ltrim="${l//[[:space:]]/}"
+            case "$ltrim" in
+              fabric) loader_names+=("Fabric");;
+              forge) loader_names+=("Forge");;
+              neoforge) loader_names+=("NeoForge");;
+              spigot) loader_names+=("Spigot");;
+              quilt) loader_names+=("Quilt");;
+              *) loader_names+=("$ltrim");;
+            esac
+          done
+
+          # CurseForge expects a comma-separated list
+          loader_versions=$(IFS=','; echo "${loader_names[*]}")
+          case "${{ matrix.mc_version }}" in
+            1.21)
+              mc_versions_cf="1.21,1.21.1,1.21.2,1.21.3,1.21.4,1.21.5"
+              ;;
+            1.21.6)
+              mc_versions_cf="1.21.6,1.21.7,1.21.8,1.21.9,1.21.10"
+              ;;
+            *)
+              mc_versions_cf="${mc_version}"
+              ;;
+          esac
+          base_versions="${mc_versions_cf},Java ${java_version}"
+          if [ -n "$loader_versions" ]; then
+            game_versions_cf="${base_versions},${loader_versions}"
+          else
+            game_versions_cf="${base_versions}"
+          fi
+
+          IFS=',' read -ra game_arr <<< "$game_versions"
+          games_json="["
+          sep=""
+          for g in "${game_arr[@]}"; do
+            gtrim="${g//[[:space:]]/}"
+            games_json="${games_json}${sep}\"${gtrim}\""
+            sep=","
+          done
+          games_json="${games_json}]"
+
+          echo "curseforge_id=${curseforge_id}" >> "$GITHUB_OUTPUT"
+          echo "release_type=${release_type}" >> "$GITHUB_OUTPUT"
+          echo "loaders=${loader_versions}" >> "$GITHUB_OUTPUT"
+          echo "game_versions_cf=${game_versions_cf}" >> "$GITHUB_OUTPUT"
+          echo "game_versions=${games_json}" >> "$GITHUB_OUTPUT"
+          echo "version_name=${mod_version}-${file_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: serverchan-${{ matrix.mc_version }}
+          path: artifacts
+
+      - name: Locate Built Jar
+        id: jar
+        run: |
+          JAR=$(find artifacts -name "*.jar" | head -1)
+          if [ -z "$JAR" ]; then
+            echo "No jar found in artifacts"
+            exit 1
+          fi
+          echo "file=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CURSE_TOKEN }}
+          project_id: ${{ steps.props.outputs.curseforge_id }}
+          game_endpoint: minecraft
+          file_path: ${{ steps.jar.outputs.file }}
+          game_versions: ${{ steps.props.outputs.game_versions_cf }}
+          release_type: ${{ steps.props.outputs.release_type }}
+          display_name: ServerChan ${{ steps.props.outputs.version_name }} (MC ${{ matrix.mc_version }})
+          changelog: Release ${{ github.ref_name }} for MC ${{ matrix.mc_version }}
+
+  release:
+    name: GitHub Release
+    needs:
+      - build
+      - test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Built Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: serverchan-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: List downloaded artifacts
+        run: ls -R artifacts || true
+
+      - name: Collect Forgix Jars
+        id: gather
+        run: |
+          mkdir -p upload
+          # Prefer Forgix merged jars; if none exist (e.g., versions without merged outputs), fall back to any built jar.
+          mapfile -t forgix_jars < <(find artifacts -type f -path "*forgix*/*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | sort)
+          mapfile -t all_jars < <(find artifacts -type f -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | sort)
+
+          if [ ${#forgix_jars[@]} -gt 0 ]; then
+            jars=("${forgix_jars[@]}")
+          else
+            echo "No Forgix merged jars found; including all built jars instead"
+            jars=("${all_jars[@]}")
+          fi
+
+          if [ ${#jars[@]} -eq 0 ]; then
+            echo "No jars found to release"
+            exit 1
+          fi
+
+          for jar in "${jars[@]}"; do
+            name=$(basename "$jar")
+            cp "$jar" "upload/$name"
+            echo "Including $name"
+          done
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: upload/*.jar
