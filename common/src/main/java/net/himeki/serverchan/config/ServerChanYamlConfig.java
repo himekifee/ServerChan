@@ -41,7 +41,7 @@ public class ServerChanYamlConfig {
         public String apiKey = "";
 
         @Comment({"", "Base URL for OpenAI API (can be changed for proxies or compatible services)", "OpenAI API基础URL (可用于代理或兼容服务)"})
-        public String baseUrl = "https://api.openai.com";
+        public String baseUrl = "https://api.openai.com/v1";
 
         @Comment({"", "AI model to use for generating responses", "用于生成响应的AI模型"})
         public String model = "gpt-5.1";

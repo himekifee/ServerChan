@@ -66,7 +66,7 @@ public class ServerChanConfigBase {
 
     public boolean useFastPathIntentionChecker = false;
 
-    public String openaiBaseUrl = "https://api.openai.com";
+    public String openaiBaseUrl = "https://api.openai.com/v1";
 
     public double temperature = 1.0;
 
