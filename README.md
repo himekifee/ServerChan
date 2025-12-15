@@ -63,7 +63,7 @@ The config file lives at:
 | Option | Description |
 |--------|-------------|
 | `openaiApiKey` | Your OpenAI API key (or compatible provider) |
-| `openaiBaseUrl` | API base URL (default: `https://api.openai.com`) |
+| `openaiBaseUrl` | API base URL (default: `https://api.openai.com/v1`) **Important: Must include `/v1` path** |
 
 ### Optional Settings
 
@@ -87,7 +87,7 @@ The intention checker uses a smaller/faster model to decide if the AI should res
 | `responseProbabilityThreshold` | `0.5` | Minimum probability to trigger response |
 | `useFastPathIntentionChecker` | `false` | Start response generation early |
 | `intentionCheckerApiKey` | (empty) | Separate API key (uses main key if empty) |
-| `intentionCheckerBaseUrl` | (empty) | Separate base URL (uses main URL if empty) |
+| `intentionCheckerBaseUrl` | (empty) | Separate base URL (uses main URL if empty). **Must include `/v1` path if set** |
 
 ### Event Settings
 

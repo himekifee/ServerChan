@@ -59,7 +59,7 @@
 | 选项 | 说明 |
 |------|------|
 | `openaiApiKey` | 你的 OpenAI 或其他兼容服务的 API Key |
-| `openaiBaseUrl` | API 地址，默认为 `https://api.openai.com` |
+| `openaiBaseUrl` | API 地址，默认为 `https://api.openai.com/v1` **重要：必须包含 `/v1` 路径** |
 
 ### 常用可选项
 
@@ -81,7 +81,7 @@
 | `responseProbabilityThreshold` | `0.5` | 触发回复的最小概率 |
 | `useFastPathIntentionChecker` | `false` | 允许提前开始生成回复 |
 | `intentionCheckerApiKey` | (空) | 如果和主 key 不同可以单独设置 |
-| `intentionCheckerBaseUrl` | (空) | 同上 |
+| `intentionCheckerBaseUrl` | (空) | 同上。**如设置，必须包含 `/v1` 路径** |
 
 ### 事件设置
 

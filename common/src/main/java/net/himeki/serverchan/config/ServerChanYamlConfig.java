@@ -40,7 +40,7 @@ public class ServerChanYamlConfig {
         @Comment({"", "API key for OpenAI authentication", "OpenAI API密钥"})
         public String apiKey = "";
 
-        @Comment({"", "Base URL for OpenAI API (can be changed for proxies or compatible services)", "OpenAI API基础URL (可用于代理或兼容服务)"})
+        @Comment({"", "Base URL for OpenAI API (can be changed for proxies or compatible services)", "IMPORTANT: Must include /v1 path (e.g., https://api.openai.com/v1)", "OpenAI API基础URL (可用于代理或兼容服务)", "重要: 必须包含 /v1 路径 (例如: https://api.openai.com/v1)"})
         public String baseUrl = "https://api.openai.com/v1";
 
         @Comment({"", "AI model to use for generating responses", "用于生成响应的AI模型"})
@@ -79,7 +79,7 @@ public class ServerChanYamlConfig {
         @Comment({"", "API key for intention checker (leave empty to use main OpenAI key)", "意图检查器的API密钥 (留空则使用主OpenAI密钥)"})
         public String apiKey = "";
 
-        @Comment({"", "Base URL for intention checker API (leave empty to use main URL)", "意图检查器的API基础URL (留空则使用主URL)"})
+        @Comment({"", "Base URL for intention checker API (leave empty to use main URL)", "IMPORTANT: Must include /v1 path if using OpenAI-compatible API", "意图检查器的API基础URL (留空则使用主URL)", "重要: 如使用OpenAI兼容API，必须包含 /v1 路径"})
         public String baseUrl = "";
 
         @Comment({"", "Model for intention checking (usually a faster/cheaper model)", "用于意图检查的模型 (通常使用更快/更便宜的模型)"})
@@ -112,6 +112,7 @@ public class ServerChanYamlConfig {
         @Comment({"", "Inherit permissions from command source when executing commands", "执行命令时继承命令源的权限"})
         public boolean inheritCmdSourcePermission = true;
 
+        @Comment({""})
         public boolean disableDevEasterEgg = false;
     }
 
