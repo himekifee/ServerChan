@@ -2,7 +2,6 @@ package net.himeki.serverchan.forge;
 
 import net.himeki.serverchan.ServerChanCore;
 import net.himeki.serverchan.i18n.I18n;
-import net.himeki.serverchan.util.PermissionUtil;
 import net.minecraft.network.chat.Component;
 #if MC_VER >= MC_1_19_2
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -55,13 +54,7 @@ public class ForgeEventHandler {
         String chatMessage = event.getMessage();
         #endif
 
-        // Get permission level across the shifting server API
-#if MC_VER >= MC_1_21_6
-        MinecraftServer server = player.createCommandSourceStack().getServer();
-#else
-        MinecraftServer server = player.server;
-#endif
-        int permissionLevel = PermissionUtil.getPermissionLevel(server, player.getGameProfile());
+        int permissionLevel = getPermissionLevel(player);
 
         // Pass to the core handler
         ServerChanCore.onChatMessage(playerName, chatMessage, permissionLevel);
@@ -122,5 +115,16 @@ public class ForgeEventHandler {
         }
         String translatedMessage = I18n.getMinecraftTranslation(key, (Object[]) stringArgs);
         ServerChanCore.onGameEvent(key, translatedMessage);
+    }
+
+    private static int getPermissionLevel(ServerPlayer player) {
+        #if MC_VER >= MC_1_21_6
+            MinecraftServer server = player.createCommandSourceStack().getServer();
+            net.minecraft.server.players.NameAndId nameAndId = new net.minecraft.server.players.NameAndId(player.getGameProfile());
+            return server.getProfilePermissions(nameAndId);
+        #else
+            MinecraftServer server = player.server;
+            return server.getProfilePermissions(player.getGameProfile());
+        #endif
     }
 }

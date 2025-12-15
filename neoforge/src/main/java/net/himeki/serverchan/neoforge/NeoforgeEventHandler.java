@@ -2,7 +2,6 @@ package net.himeki.serverchan.neoforge;
 
 import net.himeki.serverchan.ServerChanCore;
 import net.himeki.serverchan.i18n.I18n;
-import net.himeki.serverchan.util.PermissionUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.MinecraftServer;
@@ -44,7 +43,7 @@ public class NeoforgeEventHandler {
         #else
             MinecraftServer server = player.server;
         #endif
-        int permissionLevel = PermissionUtil.getPermissionLevel(server, player.getGameProfile());
+        int permissionLevel = getPermissionLevel(player, server);
 
         // Pass to the core handler
         ServerChanCore.onChatMessage(playerName, chatMessage, permissionLevel);
@@ -107,5 +106,14 @@ public class NeoforgeEventHandler {
                 ServerChanCore.onGameEvent(key, translatedMessage);
             }
         }
+    }
+
+    private static int getPermissionLevel(ServerPlayer player, MinecraftServer server) {
+        #if MC_VER >= MC_1_21_6
+            net.minecraft.server.players.NameAndId nameAndId = new net.minecraft.server.players.NameAndId(player.getGameProfile());
+            return server.getProfilePermissions(nameAndId);
+        #else
+            return server.getProfilePermissions(player.getGameProfile());
+        #endif
     }
 }

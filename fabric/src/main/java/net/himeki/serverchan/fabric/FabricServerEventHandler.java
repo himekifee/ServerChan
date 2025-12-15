@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 #endif
 import net.himeki.serverchan.ServerChanCore;
 import net.himeki.serverchan.i18n.I18n;
-import net.himeki.serverchan.util.PermissionUtil;
 
 // Version-specific imports
 #if MC_VER >= MC_1_19_2
@@ -80,10 +79,12 @@ public class FabricServerEventHandler {
     ) {
         #if MC_VER >= MC_1_21_6
             net.minecraft.server.MinecraftServer server = player.createCommandSourceStack().getServer();
+            net.minecraft.server.players.NameAndId nameAndId = new net.minecraft.server.players.NameAndId(player.getGameProfile());
+            return server.getProfilePermissions(nameAndId);
         #else
             net.minecraft.server.MinecraftServer server = player.server;
+            return server.getProfilePermissions(player.getGameProfile());
         #endif
-        return PermissionUtil.getPermissionLevel(server, player.getGameProfile());
     }
     #endif
 }
