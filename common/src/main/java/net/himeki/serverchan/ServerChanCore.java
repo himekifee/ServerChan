@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 
 public class ServerChanCore {
     public static final String MOD_ID = "serverchan";
@@ -111,77 +112,86 @@ public class ServerChanCore {
             return;
         }
 
-        CompletableFuture.runAsync(() -> {
-            if (!enabled) {
-                return;
-            }
+        try {
+            CompletableFuture.runAsync(() -> {
+                if (!enabled) {
+                    return;
+                }
 
-            ZoneId zoneId;
-            try {
-                zoneId = ZoneId.of(CONFIG.timeZone);
-            } catch (Exception e) {
-                zoneId = ZoneId.systemDefault();
-                LOGGER.error("Invalid time zone in config, using system default", e);
-            }
-            ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
-            String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String requestMessage = "[" + formattedDateTime + "] " + translatedMessage;
+                ZoneId zoneId;
+                try {
+                    zoneId = ZoneId.of(CONFIG.timeZone);
+                } catch (Exception e) {
+                    zoneId = ZoneId.systemDefault();
+                    LOGGER.error("Invalid time zone in config, using system default", e);
+                }
+                ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
+                String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String requestMessage = "[" + formattedDateTime + "] " + translatedMessage;
 
-            if (!enabled) {
-                return;
-            }
+                if (!enabled) {
+                    return;
+                }
 
-            String aiResponse = OpenAIHandler.getEventResponse("Systems", requestMessage, 0);
+                String aiResponse = OpenAIHandler.getEventResponse("Systems", requestMessage, 0);
 
-            // Check if response contains the no_message token
-            if (OpenAIHandler.isNoMessageResponse(aiResponse)) {
-                // AI decided not to respond to this event
-                return;
-            }
+                // Check if response contains the no_message token
+                if (OpenAIHandler.isNoMessageResponse(aiResponse)) {
+                    // AI decided not to respond to this event
+                    return;
+                }
 
-            // Only broadcast if there's a valid response
-            if (enabled && aiResponse != null && !aiResponse.isEmpty() && messageBroadcaster != null && messageBroadcaster.isReady()) {
-                messageBroadcaster.broadcastMessage("§" + CONFIG.botColor + I18n.get("bot.name") + ": " + aiResponse);
-            }
-        }, OpenAIHandler.getAsyncExecutor());
+                // Only broadcast if there's a valid response
+                if (enabled && aiResponse != null && !aiResponse.isEmpty() && messageBroadcaster != null && messageBroadcaster.isReady()) {
+                    messageBroadcaster.broadcastMessage("§" + CONFIG.botColor + I18n.get("bot.name") + ": " + aiResponse);
+                }
+            }, OpenAIHandler.getAsyncExecutor());
+        } catch (RejectedExecutionException e) {
+            LOGGER.debug("Skipping game event {} because async executor is shutting down", eventKey);
+        }
     }
 
     private static CompletableFuture<String> processAIResponseAsync(String sender, String message, int permissionLevel) {
-        return CompletableFuture.supplyAsync(() -> {
-            if (!enabled) {
-                return null;
-            }
+        try {
+            return CompletableFuture.supplyAsync(() -> {
+                if (!enabled) {
+                    return null;
+                }
 
-            ZoneId zoneId;
-            try {
-                zoneId = ZoneId.of(CONFIG.timeZone);
-            } catch (Exception e) {
-                zoneId = ZoneId.systemDefault();
-                LOGGER.error("Invalid time zone in config, using system default", e);
-            }
-            ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
-            String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String requestMessage = "[" + formattedDateTime + "] " + "<" + sender + ">: " + message;
+                ZoneId zoneId;
+                try {
+                    zoneId = ZoneId.of(CONFIG.timeZone);
+                } catch (Exception e) {
+                    zoneId = ZoneId.systemDefault();
+                    LOGGER.error("Invalid time zone in config, using system default", e);
+                }
+                ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
+                String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String requestMessage = "[" + formattedDateTime + "] " + "<" + sender + ">: " + message;
 
-            String response = OpenAIHandler.getChatResponse(sender, requestMessage, permissionLevel);
+                String response = OpenAIHandler.getChatResponse(sender, requestMessage, permissionLevel);
 
-            if (!enabled) {
-                return null;
-            }
+                if (!enabled) {
+                    return null;
+                }
 
-            // Check if response contains the no_message token
-            if (OpenAIHandler.isNoMessageResponse(response)) {
-                // AI decided not to respond, return null
-                return null;
-            }
+                // Check if response contains the no_message token
+                if (OpenAIHandler.isNoMessageResponse(response)) {
+                    // AI decided not to respond, return null
+                    return null;
+                }
 
-            // Clean up the response if it's not null
-            if (response != null) {
-                return response.replaceAll("\\n{2,}", "\n").trim();
-            }
+                // Clean up the response if it's not null
+                if (response != null) {
+                    return response.replaceAll("\\n{2,}", "\n").trim();
+                }
 
-            return response;
-        }, OpenAIHandler.getAsyncExecutor());
+                return response;
+            }, OpenAIHandler.getAsyncExecutor());
+        } catch (RejectedExecutionException e) {
+            LOGGER.debug("Skipping chat message processing because async executor is shutting down");
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
     private static boolean shouldProcessEvent(String key) {
@@ -204,6 +214,7 @@ public class ServerChanCore {
      * Shutdown the OpenAI handler
      */
     public static void shutdown() {
+        enabled = false;
         OpenAIHandler.shutdown();
     }
 
