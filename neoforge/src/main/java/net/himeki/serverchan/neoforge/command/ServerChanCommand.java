@@ -2,6 +2,7 @@ package net.himeki.serverchan.neoforge.command;
 
 import net.himeki.serverchan.ServerChanCore;
 import com.mojang.brigadier.CommandDispatcher;
+import net.himeki.serverchan.neoforge.NeoforgeMain;
 import net.minecraft.commands.CommandSourceStack;
 
 import static net.minecraft.commands.Commands.literal;
@@ -12,6 +13,7 @@ public class ServerChanCommand {
                 .then(literal("reload")
                         .requires(source -> source.hasPermission(4))
                         .executes(context -> {
+                            NeoforgeMain.reloadConfig();
                             String message = ServerChanCore.executeReload();
                             if (ServerChanCore.getMessageBroadcaster() != null) {
                                 ServerChanCore.getMessageBroadcaster().broadcastMessage(message);

@@ -3,6 +3,7 @@ package net.himeki.serverchan.forge.command;
 import net.himeki.serverchan.ServerChanCore;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import net.himeki.serverchan.forge.ForgeMain;
 import net.minecraft.commands.CommandSourceStack;
 
 public class ServerChanCommand {
@@ -15,6 +16,7 @@ public class ServerChanCommand {
                 .then(literal("reload")
                         .requires(source -> source.hasPermission(4))
                         .executes(context -> {
+                            ForgeMain.reloadConfig();
                             String message = ServerChanCore.executeReload();
                             if (ServerChanCore.getMessageBroadcaster() != null) {
                                 ServerChanCore.getMessageBroadcaster().broadcastMessage(message);
