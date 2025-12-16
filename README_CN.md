@@ -5,12 +5,15 @@
 [![Modrinth](https://img.shields.io/modrinth/dt/frZpQL6O?logo=modrinth&label=Modrinth)](https://modrinth.com/mod/serverchan)
 [![CurseForge](https://img.shields.io/curseforge/dt/1393571?logo=curseforge&label=CurseForge)](https://www.curseforge.com/minecraft/mc-mods/serverchan)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.12--1.21-green.svg)](https://minecraft.net)
+[![Discord](https://img.shields.io/discord/1450587683176054796?logo=discord&label=Discord)](https://discord.gg/NuzHC7BCDc)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/common/src/main/resources/assets/serverchan/icon.png" alt="ServerChan 模组图标" width="200" />
 </p>
 
-> 欢迎来到 ServerChan！这是一款把现代 AI 助手带进 Minecraft 服务器的 Mod，能听懂聊天、回应事件，还能帮你执行命令。如果你想看英文版文档，可以前往 [README.md](README.md)。
+[English](README.md) | **[简体中文](README_CN.md)** | [日本語](README_JA.md)
+
+欢迎来到 ServerChan！这是一款把现代 AI 助手带进 Minecraft 服务器的 Mod，能听懂聊天、回应事件，还能帮你执行命令。
 
 ## 主要特性
 
@@ -162,6 +165,10 @@ cd ServerChan
 2. 新建分支 `git checkout -b feature/my-feature`
 3. 提交改动 `git commit -m "Add my feature"`
 4. 推送并发起 PR
+
+## Discord
+
+加入我们的 [Discord 服务器](https://discord.gg/NuzHC7BCDc)，与社区交流、获取帮助或分享你的 ServerChan 配置！
 
 ## 授权协议
 

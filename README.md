@@ -5,12 +5,13 @@
 [![Modrinth](https://img.shields.io/modrinth/dt/frZpQL6O?logo=modrinth&label=Modrinth)](https://modrinth.com/mod/serverchan)
 [![CurseForge](https://img.shields.io/curseforge/dt/1393571?logo=curseforge&label=CurseForge)](https://www.curseforge.com/minecraft/mc-mods/serverchan)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.12--1.21-green.svg)](https://minecraft.net)
+[![Discord](https://img.shields.io/discord/1450587683176054796?logo=discord&label=Discord)](https://discord.gg/NuzHC7BCDc)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/common/src/main/resources/assets/serverchan/icon.png" alt="ServerChan mod icon" width="200" />
 </p>
 
-> 需要简体中文？请查看 [README_CN.md](README_CN.md)。Prefer English? You're already here — thanks for stopping by! 👋
+**[English](README.md)** | [简体中文](README_CN.md) | [日本語](README_JA.md)
 
 ServerChan is a friendly, AI-powered helper for Minecraft servers. It listens to chat, reacts to in-game events, and can even carry out commands when you give it permission. Whether you run a cozy SMP or a busy public server, ServerChan keeps conversations lively without spamming players.
 
@@ -186,6 +187,10 @@ Contributions are welcome! Please feel free to submit issues and pull requests; 
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Discord
+
+Join our [Discord server](https://discord.gg/NuzHC7BCDc) to chat with the community, get help, or share your ServerChan setup!
 
 ## License
 
