@@ -29,11 +29,11 @@
 ## 演示
 
 <p align="center">
-  <img src="example/welcome.png" alt="ServerChan 欢迎消息" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/welcome.png" alt="ServerChan 欢迎消息" width="800" />
 </p>
 
 <p align="center">
-  <img src="example/command.png" alt="ServerChan 命令执行" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/command.png" alt="ServerChan 命令执行" width="800" />
 </p>
 
 ## 兼容矩阵

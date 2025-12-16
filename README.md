@@ -29,11 +29,11 @@ ServerChan is a friendly, AI-powered helper for Minecraft servers. It listens to
 ## Demo
 
 <p align="center">
-  <img src="example/welcome.png" alt="ServerChan welcome message" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/welcome.png" alt="ServerChan welcome message" width="800" />
 </p>
 
 <p align="center">
-  <img src="example/command.png" alt="ServerChan command execution" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/command.png" alt="ServerChan command execution" width="800" />
 </p>
 
 ## Loader Compatibility Matrix

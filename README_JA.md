@@ -29,11 +29,11 @@ ServerChanは、MinecraftサーバーにAIアシスタントを導入するMod�
 ## デモ
 
 <p align="center">
-  <img src="example/welcome.png" alt="ServerChan ウェルカムメッセージ" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/welcome.png" alt="ServerChan ウェルカムメッセージ" width="800" />
 </p>
 
 <p align="center">
-  <img src="example/command.png" alt="ServerChan コマンド実行" width="600" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/example/command.png" alt="ServerChan コマンド実行" width="800" />
 </p>
 
 ## ローダー互換性マトリックス
