@@ -5,8 +5,16 @@ on:
     branches: [main]
     tags:
       - "v*"
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - "example/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - "example/**"
   workflow_dispatch:
     inputs:
       mc_version:
