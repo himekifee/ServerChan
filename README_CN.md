@@ -26,6 +26,16 @@
 - **高度可配置** - 提供完整的提示词、模型、行为设置
 - **多语言** - 内置中/英/日的消息翻译
 
+## 演示
+
+<p align="center">
+  <img src="example/welcome.png" alt="ServerChan 欢迎消息" width="600" />
+</p>
+
+<p align="center">
+  <img src="example/command.png" alt="ServerChan 命令执行" width="600" />
+</p>
+
 ## 兼容矩阵
 
 | Minecraft 版本 | Java | Fabric | Forge | NeoForge | Spigot/Paper |

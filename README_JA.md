@@ -26,6 +26,16 @@ ServerChanは、MinecraftサーバーにAIアシスタントを導入するMod�
 - **高度な設定** - プロンプト、モデル、応答動作などをカスタマイズ可能
 - **多言語対応** - 英語、中国語、日本語のi18nサポート内蔵
 
+## デモ
+
+<p align="center">
+  <img src="example/welcome.png" alt="ServerChan ウェルカムメッセージ" width="600" />
+</p>
+
+<p align="center">
+  <img src="example/command.png" alt="ServerChan コマンド実行" width="600" />
+</p>
+
 ## ローダー互換性マトリックス
 
 | バージョン | Java | Fabric | Forge | NeoForge | Spigot/Paper |

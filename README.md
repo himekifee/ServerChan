@@ -26,6 +26,16 @@ ServerChan is a friendly, AI-powered helper for Minecraft servers. It listens to
 - **Fully Configurable** - Customize prompts, models, response behavior, and more
 - **Internationalization** - Built-in i18n support (English, Chinese, Japanese)
 
+## Demo
+
+<p align="center">
+  <img src="example/welcome.png" alt="ServerChan welcome message" width="600" />
+</p>
+
+<p align="center">
+  <img src="example/command.png" alt="ServerChan command execution" width="600" />
+</p>
+
 ## Loader Compatibility Matrix
 
 | Version | Java | Fabric | Forge | NeoForge | Spigot/Paper |
