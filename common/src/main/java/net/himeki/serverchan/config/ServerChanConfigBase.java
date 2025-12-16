@@ -52,7 +52,7 @@ public class ServerChanConfigBase {
 
     public String model = "gpt-5.1";
 
-    public String intentionCheckerModel = "qwen3-235b-a22b-2507";
+    public String intentionCheckerModel = "gpt-4o-mini";
 
     public boolean useIntentionChecker = true;
 

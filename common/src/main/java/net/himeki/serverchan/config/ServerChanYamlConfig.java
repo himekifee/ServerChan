@@ -82,7 +82,7 @@ public class ServerChanYamlConfig {
         @Comment({"", "Base URL for intention checker API (leave empty to use main URL)", "IMPORTANT: Must include /v1 path if using OpenAI-compatible API", "意图检查器的API基础URL (留空则使用主URL)", "重要: 如使用OpenAI兼容API，必须包含 /v1 路径", "意図チェッカーAPIのベースURL (空白の場合はメインURLを使用)", "重要: OpenAI互換APIを使用する場合は /v1 パスを含める必要があります"})
         public String baseUrl = "";
 
-        @Comment({"", "Model for intention checking (usually a faster/cheaper model)", "用于意图检查的模型 (通常使用更快/更便宜的模型)", "意図チェック用のモデル (通常はより高速/安価なモデル)"})
+        @Comment({"", "Model for intention checking (usually a faster/cheaper model)", "Personal recommendation: qwen3-235b-a22b-2507 via Cerebras", "用于意图检查的模型 (通常使用更快/更便宜的模型)", "个人推荐: 通过 Cerebras 使用 qwen3-235b-a22b-2507", "意図チェック用のモデル (通常はより高速/安価なモデル)", "個人的な推奨: Cerebras経由でqwen3-235b-a22b-2507"})
         public String model = "gpt-4o-mini";
 
         @Comment({"", "Prompts for intention checking system", "意图检查系统的提示词", "意図チェックシステムのプロンプト"})

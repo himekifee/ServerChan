@@ -84,7 +84,7 @@ The intention checker uses a smaller/faster model to decide if the AI should res
 | Option | Default | Description |
 |--------|---------|-------------|
 | `useIntentionChecker` | `true` | Enable smart response filtering |
-| `intentionCheckerModel` | `qwen3-235b-a22b-2507` | Model for intention checking |
+| `intentionCheckerModel` | `gpt-4o-mini` | Model for intention checking (personal rec: `qwen3-235b-a22b-2507` via Cerebras) |
 | `responseProbabilityThreshold` | `0.5` | Minimum probability to trigger response |
 | `useFastPathIntentionChecker` | `false` | Start response generation early |
 | `intentionCheckerApiKey` | (empty) | Separate API key (uses main key if empty) |

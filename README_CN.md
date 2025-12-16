@@ -80,7 +80,7 @@
 | 选项 | 默认值 | 说明 |
 |------|--------|------|
 | `useIntentionChecker` | `true` | 启用智能过滤 |
-| `intentionCheckerModel` | `qwen3-235b-a22b-2507` | 判断用模型 |
+| `intentionCheckerModel` | `gpt-4o-mini` | 判断用模型 (个人推荐: 通过 Cerebras 使用 `qwen3-235b-a22b-2507`) |
 | `responseProbabilityThreshold` | `0.5` | 触发回复的最小概率 |
 | `useFastPathIntentionChecker` | `false` | 允许提前开始生成回复 |
 | `intentionCheckerApiKey` | (空) | 如果和主 key 不同可以单独设置 |

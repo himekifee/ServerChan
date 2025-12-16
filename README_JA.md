@@ -82,7 +82,7 @@ ServerChanは、MinecraftサーバーにAIアシスタントを導入するMod�
 | オプション | デフォルト | 説明 |
 |-----------|----------|------|
 | `useIntentionChecker` | `true` | スマート応答フィルタリングを有効化 |
-| `intentionCheckerModel` | `qwen3-235b-a22b-2507` | 意図チェック用モデル |
+| `intentionCheckerModel` | `gpt-4o-mini` | 意図チェック用モデル (個人的な推奨: Cerebras経由で`qwen3-235b-a22b-2507`) |
 | `responseProbabilityThreshold` | `0.5` | 応答をトリガーする最小確率 |
 | `useFastPathIntentionChecker` | `false` | 応答生成を早期開始 |
 | `intentionCheckerApiKey` | (空) | 別のAPIキー（空の場合はメインキーを使用） |
