@@ -8,7 +8,7 @@
 [![Discord](https://img.shields.io/discord/1450587683176054796?logo=discord&label=Discord)](https://discord.gg/NuzHC7BCDc)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/common/src/main/resources/assets/serverchan/icon.png" alt="ServerChan 模组图标" width="200" />
+  <img src="https://raw.githubusercontent.com/himekifee/ServerChan/main/common/src/main/resources/assets/serverchan/icon.png" alt="ServerChan 模组图标" width="400" />
 </p>
 
 [English](README.md) | **[简体中文](README_CN.md)** | [日本語](README_JA.md)
